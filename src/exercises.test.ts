@@ -58,3 +58,14 @@ describe('bicep curls', () => {
     expect(reps('curls', [{ ...down, ...idle }, ...cycle({ ...up, ...idle }, { ...down, ...idle }, 3)])).toBe(3);
   });
 });
+
+describe('tricep extensions', () => {
+  const locked: Pose = { lShoulder: [0.5, 0.3], lElbow: [0.5, 0.15], lWrist: [0.5, 0.02] };
+  const bent: Pose = { lShoulder: [0.5, 0.3], lElbow: [0.5, 0.15], lWrist: [0.42, 0.2] };
+  const armsDown: Pose = { lShoulder: [0.5, 0.3], lElbow: [0.5, 0.45], lWrist: [0.52, 0.32] };
+  it('counts on lockout overhead', () => expect(reps('triceps', [locked, ...cycle(bent, locked, 5)])).toBe(5));
+  it('ignores bent elbows below shoulder height', () => {
+    expect(signal('triceps', armsDown)).toBeNaN();
+    expect(reps('triceps', [locked, ...cycle(armsDown, locked, 3)])).toBe(0);
+  });
+});

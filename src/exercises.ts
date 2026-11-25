@@ -188,6 +188,23 @@ const curls: Detector = {
   range: [20, 180],
 };
 
+/**
+ * Overhead tricep extensions: elbow angle, only while the arm is overhead.
+ * "Overhead" is tested on the elbow (above the shoulder) rather than the
+ * wrist, because at the bottom of the rep the wrists drop behind the head.
+ */
+const triceps: Detector = {
+  label: 'elbow angle (arms overhead)',
+  unit: '°',
+  signal: (f) => combine(sides(f, ARM_L, ARM_R, ([s, e, w]) => (e.y < s.y ? angle(s, e, w) : NaN)), 'min'),
+  lo: 95,
+  hi: 150,
+  countOn: 'hi',
+  minRepMs: 700,
+  step: 5,
+  range: [20, 180],
+};
+
 /* ---------- catalogue ---------- */
 
 const SIDE = 'Side-on to the camera works best.';
@@ -199,7 +216,7 @@ export const EXERCISES: ExerciseDef[] = [
   { id: 'swings', name: 'Swings', defaultReps: 5, confidence: 'none', hint: SIDE },
   { id: 'squats', name: 'Goblet squats', defaultReps: 5, confidence: 'high', hint: FRONT, detector: squats },
   { id: 'curls', name: 'Bicep curls', defaultReps: 5, confidence: 'high', hint: FRONT, detector: curls },
-  { id: 'triceps', name: 'Tricep extensions', defaultReps: 5, confidence: 'none', hint: SIDE },
+  { id: 'triceps', name: 'Tricep extensions', defaultReps: 5, confidence: 'medium', hint: SIDE, detector: triceps },
   {
     id: 'pullovers',
     name: 'Pullovers',
