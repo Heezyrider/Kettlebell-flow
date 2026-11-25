@@ -224,6 +224,19 @@ const swings: Detector = {
   range: [-1.6, 0.6],
 };
 
+/** Cleans: the working wrist travels from below the hip (about -1) to the rack position at the shoulder (about -0.15). */
+const cleans: Detector = {
+  label: 'wrist height vs shoulder / torso (higher hand)',
+  unit: '',
+  signal: (f) => combine(sides(f, REACH_L, REACH_R, wristVsShoulder), 'max'),
+  lo: -0.85,
+  hi: -0.35,
+  countOn: 'hi',
+  minRepMs: 800,
+  step: 0.05,
+  range: [-1.6, 0.6],
+};
+
 /* ---------- catalogue ---------- */
 
 const SIDE = 'Side-on to the camera works best.';
@@ -231,7 +244,7 @@ const FRONT = 'Face the camera, full body in frame.';
 
 export const EXERCISES: ExerciseDef[] = [
   { id: 'rows', name: 'Rows', defaultReps: 5, confidence: 'none', hint: SIDE },
-  { id: 'cleans', name: 'Cleans', defaultReps: 5, confidence: 'none', hint: FRONT },
+  { id: 'cleans', name: 'Cleans', defaultReps: 5, confidence: 'medium', hint: FRONT, detector: cleans },
   { id: 'swings', name: 'Swings', defaultReps: 5, confidence: 'high', hint: SIDE, detector: swings },
   { id: 'squats', name: 'Goblet squats', defaultReps: 5, confidence: 'high', hint: FRONT, detector: squats },
   { id: 'curls', name: 'Bicep curls', defaultReps: 5, confidence: 'high', hint: FRONT, detector: curls },

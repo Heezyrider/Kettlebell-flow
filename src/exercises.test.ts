@@ -79,3 +79,11 @@ describe('swings', () => {
   });
   it('counts at the top of the swing', () => expect(reps('swings', [bottom, ...cycle(top, bottom, 5)])).toBe(5));
 });
+
+describe('cleans', () => {
+  const hang: Pose = { rShoulder: [0.5, 0.3], rHip: [0.5, 0.55], rWrist: [0.5, 0.62] };
+  const rack: Pose = { rShoulder: [0.5, 0.3], rHip: [0.5, 0.55], rWrist: [0.52, 0.33] };
+  const waist: Pose = { rShoulder: [0.5, 0.3], rHip: [0.5, 0.55], rWrist: [0.52, 0.46] };
+  it('counts when the bell reaches the rack position', () => expect(reps('cleans', [hang, ...cycle(rack, hang, 5)])).toBe(5));
+  it('does not count a pull that stops at the waist', () => expect(reps('cleans', [hang, ...cycle(waist, hang, 3)])).toBe(0));
+});
