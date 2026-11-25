@@ -237,13 +237,31 @@ const cleans: Detector = {
   range: [-1.6, 0.6],
 };
 
+/**
+ * Rows: height of the pulling wrist relative to the hip, in torso lengths.
+ * Hinged over with the arm hanging the wrist is well below the hip (about
+ * -0.6); at the top of the row it reaches hip height (about 0).
+ */
+const rows: Detector = {
+  label: 'wrist height vs hip / torso (higher hand)',
+  unit: '',
+  signal: (f) =>
+    combine(sides(f, REACH_L, REACH_R, ([shoulder, wrist, hip]) => (hip.y - wrist.y) / Math.max(dist(shoulder, hip), 1e-6)), 'max'),
+  lo: -0.45,
+  hi: -0.12,
+  countOn: 'hi',
+  minRepMs: 700,
+  step: 0.05,
+  range: [-1.2, 0.8],
+};
+
 /* ---------- catalogue ---------- */
 
 const SIDE = 'Side-on to the camera works best.';
 const FRONT = 'Face the camera, full body in frame.';
 
 export const EXERCISES: ExerciseDef[] = [
-  { id: 'rows', name: 'Rows', defaultReps: 5, confidence: 'none', hint: SIDE },
+  { id: 'rows', name: 'Rows', defaultReps: 5, confidence: 'medium', hint: SIDE, detector: rows },
   { id: 'cleans', name: 'Cleans', defaultReps: 5, confidence: 'medium', hint: FRONT, detector: cleans },
   { id: 'swings', name: 'Swings', defaultReps: 5, confidence: 'high', hint: SIDE, detector: swings },
   { id: 'squats', name: 'Goblet squats', defaultReps: 5, confidence: 'high', hint: FRONT, detector: squats },

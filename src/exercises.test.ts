@@ -87,3 +87,13 @@ describe('cleans', () => {
   it('counts when the bell reaches the rack position', () => expect(reps('cleans', [hang, ...cycle(rack, hang, 5)])).toBe(5));
   it('does not count a pull that stops at the waist', () => expect(reps('cleans', [hang, ...cycle(waist, hang, 3)])).toBe(0));
 });
+
+describe('rows', () => {
+  const hang: Pose = { lShoulder: [0.6, 0.4], lHip: [0.4, 0.5], lWrist: [0.6, 0.65] };
+  const pulled: Pose = { lShoulder: [0.6, 0.4], lHip: [0.4, 0.5], lWrist: [0.5, 0.5] };
+  it('measures wrist height against the hip', () => {
+    expect(signal('rows', hang)).toBeLessThan(-0.6);
+    expect(signal('rows', pulled)).toBeCloseTo(0, 1);
+  });
+  it('counts at the top of the pull', () => expect(reps('rows', [hang, ...cycle(pulled, hang, 5)])).toBe(5));
+});
