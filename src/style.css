@@ -380,6 +380,10 @@ input[type='range'] {
   color: var(--ok);
   border-color: var(--ok);
 }
+.mode-tag.hold {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .mode-tag.lost {
   color: var(--danger);
   border-color: var(--danger);

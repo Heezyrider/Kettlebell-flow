@@ -19,6 +19,9 @@ type Phase = 'loading' | 'intro' | 'active' | 'transition' | 'roundDone' | 'rest
 /** Body must be missing this long mid-set before the warning appears. */
 const WARN_AFTER_MS = 1200;
 
+/** Skeleton colours: green only while the exercise's signal is actually being counted. */
+const SKELETON = { ok: '#35e0a1', hold: '#ffb020', lost: '#ff5d5d' };
+
 export class Workout {
   private seq: Sequence;
   private phase: Phase = 'loading';
@@ -38,6 +41,7 @@ export class Workout {
   private counter: RepCounter | null = null;
   private detector: Detector | null = null;
   private lostSince: number | null = null;
+  private track: 'lost' | 'hold' | 'ok' | null = null;
 
   private engine: PoseEngine;
   private wake = new WakeLock();
@@ -314,7 +318,16 @@ export class Workout {
       const det = ex.detector;
       const th = this.settings.thresholds[ex.id] ?? { lo: det.lo, hi: det.hi };
       this.detector = det;
-      this.counter = new RepCounter({ lo: th.lo, hi: th.hi, countOn: det.countOn, minRepMs: det.minRepMs });
+      this.counter = new RepCounter({
+        lo: th.lo,
+        hi: th.hi,
+        countOn: det.countOn,
+        minRepMs: det.minRepMs,
+        dwellMs: det.dwellMs ?? 150,
+        settleMs: 400,
+      });
+      this.track = null;
+      this.engine.skeletonColor = SKELETON.hold;
       // 0 = "never seen yet": warn on the first frame without a body.
       this.lostSince = 0;
       this.modeTag.textContent = '📷 looking for you…';
@@ -337,23 +350,30 @@ export class Workout {
     if (this.phase !== 'active' || this.paused || !this.counter || !this.detector) return;
     const raw = lm ? this.detector.signal({ lm, aspect }) : null;
     if (raw === null) {
+      // Joints this exercise needs are hidden or out of frame.
       if (this.lostSince === null) this.lostSince = t;
       if (t - this.lostSince >= WARN_AFTER_MS) {
         this.warn.textContent = 'Step back — full body not visible';
         this.warn.hidden = false;
-        this.modeTag.textContent = '📷 not tracking';
-        this.modeTag.className = 'mode-tag lost';
+        this.setTrack('lost');
       }
     } else {
-      if (this.lostSince !== null) {
-        this.lostSince = null;
-        this.warn.hidden = true;
-        this.modeTag.textContent = '📷 tracking';
-        this.modeTag.className = 'mode-tag ok';
-      }
+      this.lostSince = null;
+      this.warn.hidden = true;
+      // NaN = visible, but not in the posture this exercise is counted in.
+      this.setTrack(Number.isNaN(raw) ? 'hold' : 'ok');
       if (this.counter.update(raw, t)) this.addRep();
     }
     this.debugUpdate?.(raw);
+  }
+
+  /** Reflects the tracking state in the status tag and the skeleton colour. */
+  private setTrack(state: 'lost' | 'hold' | 'ok'): void {
+    this.engine.skeletonColor = SKELETON[state];
+    if (state === this.track) return;
+    this.track = state;
+    this.modeTag.textContent = state === 'ok' ? '📷 counting' : state === 'hold' ? '📷 get into position' : '📷 not tracking';
+    this.modeTag.className = `mode-tag ${state}`;
   }
 
   /** One rep, from the camera or from the +1 button. */

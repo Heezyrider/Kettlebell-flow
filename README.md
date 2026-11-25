@@ -50,7 +50,12 @@ The Vite base path is set automatically: the workflow passes `BASE_PATH=/<repo n
 2. puts it in the **lo** zone (≤ `lo`) or the **hi** zone (≥ `hi`); the gap between the two thresholds is the hysteresis band, where nothing happens,
 3. counts a rep on a full cycle – when the signal enters the zone named by `countOn` after having been in the other one,
 4. ignores reps that come faster than `minRepMs`,
-5. skips frames where the needed landmarks are not visible (visibility < 0.5 or outside the frame).
+5. requires the signal to stay past a threshold for a short dwell time (150 ms by default) so single-frame glitches are ignored, and the start position to be held for 0.4 s before counting begins,
+6. skips frames where the needed landmarks are not visible (visibility < 0.6 or outside the frame).
+
+Most exercises also have a **posture gate**: the signal only exists while the body is in the position the exercise is done in (plank for push-ups, chest up for squats, standing for curls, hinged for rows, elbows overhead for tricep extensions, hands together for swings). Outside it the frame is ignored, so walking into frame or picking up the bell is not counted.
+
+The skeleton colour and the status tag tell you which state you are in: **green / "counting"** – the signal is live; **amber / "get into position"** – you are visible but outside the posture gate; **red / "not tracking"** – required joints are hidden or out of frame. Green means the exercise is being measured, not that every rep will be right – that still depends on the thresholds.
 
 The exercises live in `src/exercises.ts`:
 

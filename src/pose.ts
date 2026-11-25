@@ -37,6 +37,8 @@ export class PoseEngine {
   detecting = false;
   onFrame: FrameHandler = () => {};
   fps = 0;
+  /** Skeleton colour; the workout sets it from the tracking state of the current exercise. */
+  skeletonColor = '#9aa4b2';
   delegate: 'GPU' | 'CPU' | null = null;
 
   constructor(
@@ -116,8 +118,8 @@ export class PoseEngine {
         frames = 0;
         fpsSince = now;
       }
-      this.draw(lm);
       this.onFrame(lm, v.videoWidth / v.videoHeight, now);
+      this.draw(lm);
     };
     this.raf = requestAnimationFrame(loop);
   }
@@ -153,7 +155,7 @@ export class PoseEngine {
     const unit = Math.max(w, hgt) / 100;
     ctx.lineCap = 'round';
     ctx.lineWidth = unit * 0.9;
-    ctx.strokeStyle = '#35e0a1';
+    ctx.strokeStyle = this.skeletonColor;
     ctx.beginPath();
     for (const [a, b] of BONES) {
       if (!seen(a) || !seen(b)) continue;
@@ -161,7 +163,7 @@ export class PoseEngine {
       ctx.lineTo(lm[b].x * w, lm[b].y * hgt);
     }
     ctx.stroke();
-    ctx.fillStyle = '#ffb020';
+    ctx.fillStyle = '#f2f4f7';
     for (const i of JOINTS) {
       if (!seen(i)) continue;
       ctx.beginPath();
