@@ -24,6 +24,10 @@ export interface CounterConfig {
   minRepMs: number;
   /** EMA factor, 0..1. Higher = snappier, lower = smoother. */
   alpha?: number;
+  /** The signal must stay in a zone this long before the zone change is accepted (filters spikes). */
+  dwellMs?: number;
+  /** The starting position must be held this long before counting begins. */
+  settleMs?: number;
 }
 
 /** Signals older than this are discarded instead of blended into the EMA. */
@@ -35,6 +39,8 @@ export class RepCounter {
   zone: Zone | null = null;
   private lastRepAt = -Infinity;
   private lastSampleAt = -Infinity;
+  private pending: Zone | null = null;
+  private pendingSince = 0;
 
   constructor(public cfg: CounterConfig) {}
 
@@ -58,7 +64,19 @@ export class RepCounter {
     this.lastSampleAt = t;
 
     const z: Zone | null = this.value <= this.cfg.lo ? 'lo' : this.value >= this.cfg.hi ? 'hi' : null;
-    if (z === null || z === this.zone) return false;
+    if (z === null || z === this.zone) {
+      this.pending = null;
+      return false;
+    }
+    // A new zone only counts once the signal has stayed there for the dwell time.
+    if (this.pending !== z) {
+      this.pending = z;
+      this.pendingSince = t;
+    }
+    const dwell = this.cfg.dwellMs ?? 0;
+    const need = this.zone === null ? Math.max(dwell, this.cfg.settleMs ?? 0) : dwell;
+    if (t - this.pendingSince < need) return false;
+    this.pending = null;
 
     const prev = this.zone;
     this.zone = z;

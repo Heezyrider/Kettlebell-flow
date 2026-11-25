@@ -37,6 +37,8 @@ export interface Detector {
   hi: number;
   countOn: CountOn;
   minRepMs: number;
+  /** Time the signal must stay past a threshold before it counts (default 150 ms). */
+  dwellMs?: number;
   /** Increment used by the threshold tuning buttons. */
   step: number;
   /** Display range of the debug bar. */
@@ -75,7 +77,7 @@ export const LM = {
   rAnkle: 28,
 } as const;
 
-export const MIN_VISIBILITY = 0.5;
+export const MIN_VISIBILITY = 0.6;
 
 interface Pt {
   x: number;
@@ -139,16 +141,42 @@ function combine(vals: number[], how: 'min' | 'max' | 'mean'): number | null {
 
 const ARM_L = [LM.lShoulder, LM.lElbow, LM.lWrist] as const;
 const ARM_R = [LM.rShoulder, LM.rElbow, LM.rWrist] as const;
-const LEG_L = [LM.lHip, LM.lKnee, LM.lAnkle] as const;
-const LEG_R = [LM.rHip, LM.rKnee, LM.rAnkle] as const;
+
+const BODY_L = [LM.lShoulder, LM.lElbow, LM.lWrist, LM.lHip] as const;
+const BODY_R = [LM.rShoulder, LM.rElbow, LM.rWrist, LM.rHip] as const;
+const LEG_TORSO_L = [LM.lHip, LM.lKnee, LM.lAnkle, LM.lShoulder] as const;
+const LEG_TORSO_R = [LM.rHip, LM.rKnee, LM.rAnkle, LM.rShoulder] as const;
+
+/*
+ * Posture gates. A detector returns NaN ("not in position") unless the body
+ * is in the posture the exercise is done in, so walking into frame or picking
+ * up the bell cannot be mistaken for reps.
+ */
+
+/** Torso closer to horizontal than vertical (plank, seen from the side). */
+const torsoHorizontal = (shoulder: Pt, hip: Pt): boolean => Math.abs(shoulder.y - hip.y) < 1.2 * Math.abs(shoulder.x - hip.x);
+
+/** Shoulders well above the hips. */
+const torsoUpright = (shoulder: Pt, hip: Pt): boolean => hip.y - shoulder.y > 0.75 * dist(shoulder, hip);
+
+/**
+ * Height of the shoulders above the hips in shin lengths: about 1.2 standing,
+ * dropping towards 0 as the torso hinges forward. The shin stays vertical, so
+ * this works from the front as well as from the side.
+ */
+const torsoHeight = (shoulder: Pt, hip: Pt, knee: Pt, ankle: Pt): number => (hip.y - shoulder.y) / Math.max(dist(knee, ankle), 1e-6);
 
 /* ---------- detectors ---------- */
 
-/** Push-ups: elbow angle. ~165° at lockout, ~80° at the bottom. Side view. */
+/**
+ * Push-ups: elbow angle. ~165° at lockout, ~80° at the bottom. Side view.
+ * Only while in a plank: torso near horizontal, hands below the shoulders.
+ */
 const pushups: Detector = {
-  label: 'elbow angle',
+  label: 'elbow angle (in plank)',
   unit: '°',
-  signal: (f) => combine(sides(f, ARM_L, ARM_R, ([s, e, w]) => angle(s, e, w)), 'min'),
+  signal: (f) =>
+    combine(sides(f, BODY_L, BODY_R, ([s, e, w, hip]) => (torsoHorizontal(s, hip) && w.y > s.y ? angle(s, e, w) : NaN)), 'min'),
   lo: 105,
   hi: 150,
   countOn: 'hi',
@@ -161,12 +189,18 @@ const pushups: Detector = {
  * Goblet squats: hip height above the knee, in shin lengths.
  * ~1.0 standing, ~0 with thighs parallel. Unlike the 2D knee angle this works
  * both facing the camera and side-on.
+ * Only while the chest is up: bending over to pick up the bell is not a squat.
  */
 const squats: Detector = {
   label: 'hip height over knee / shin',
   unit: '',
   signal: (f) =>
-    combine(sides(f, LEG_L, LEG_R, ([hip, knee, ankle]) => (knee.y - hip.y) / Math.max(dist(knee, ankle), 1e-6)), 'mean'),
+    combine(
+      sides(f, LEG_TORSO_L, LEG_TORSO_R, ([hip, knee, ankle, shoulder]) =>
+        torsoHeight(shoulder, hip, knee, ankle) >= 0.6 ? (knee.y - hip.y) / Math.max(dist(knee, ankle), 1e-6) : NaN,
+      ),
+      'mean',
+    ),
   lo: 0.4,
   hi: 0.75,
   countOn: 'hi',
@@ -175,11 +209,15 @@ const squats: Detector = {
   range: [-0.2, 1.3],
 };
 
-/** Bicep curls: elbow angle of the more bent arm. ~165° hanging, ~40° at the top. */
+/**
+ * Bicep curls: elbow angle of the more bent arm. ~165° hanging, ~40° at the top.
+ * Only while standing upright with the elbow below the shoulder.
+ */
 const curls: Detector = {
-  label: 'elbow angle',
+  label: 'elbow angle (standing, elbow down)',
   unit: '°',
-  signal: (f) => combine(sides(f, ARM_L, ARM_R, ([s, e, w]) => angle(s, e, w)), 'min'),
+  signal: (f) =>
+    combine(sides(f, BODY_L, BODY_R, ([s, e, w, hip]) => (torsoUpright(s, hip) && e.y > s.y ? angle(s, e, w) : NaN)), 'min'),
   lo: 70,
   hi: 140,
   countOn: 'lo',
@@ -211,11 +249,21 @@ const REACH_R = [LM.rShoulder, LM.rWrist, LM.rHip] as const;
 /** Wrist height relative to the shoulder, in torso lengths: 0 at shoulder level, about -1 at the hip. */
 const wristVsShoulder = ([shoulder, wrist, hip]: Pt[]): number => (shoulder.y - wrist.y) / Math.max(dist(shoulder, hip), 1e-6);
 
-/** Swings: wrist height relative to the shoulder. Below the hips at the bottom, near chest height at the top. */
+/**
+ * Swings: wrist height relative to the shoulder. Below the hips at the bottom,
+ * near chest height at the top. Two-handed: when both wrists are visible they
+ * must be together, so reaching or waving with one arm does not count.
+ */
 const swings: Detector = {
-  label: 'wrist height vs shoulder / torso',
+  label: 'wrist height vs shoulder / torso (hands together)',
   unit: '',
-  signal: (f) => combine(sides(f, REACH_L, REACH_R, wristVsShoulder), 'mean'),
+  signal: (f) => {
+    const left = pts(f, REACH_L);
+    const right = pts(f, REACH_R);
+    if (left && right && dist(left[1], right[1]) > 0.7 * dist(left[0], left[2])) return NaN;
+    return combine(sides(f, REACH_L, REACH_R, wristVsShoulder), 'mean');
+  },
+  dwellMs: 80,
   lo: -0.75,
   hi: -0.25,
   countOn: 'hi',
@@ -229,6 +277,7 @@ const cleans: Detector = {
   label: 'wrist height vs shoulder / torso (higher hand)',
   unit: '',
   signal: (f) => combine(sides(f, REACH_L, REACH_R, wristVsShoulder), 'max'),
+  dwellMs: 100,
   lo: -0.85,
   hi: -0.35,
   countOn: 'hi',
@@ -241,12 +290,21 @@ const cleans: Detector = {
  * Rows: height of the pulling wrist relative to the hip, in torso lengths.
  * Hinged over with the arm hanging the wrist is well below the hip (about
  * -0.6); at the top of the row it reaches hip height (about 0).
+ * Only while hinged forward: standing up with the bell does not count.
  */
+const ROW_L = [LM.lShoulder, LM.lWrist, LM.lHip, LM.lKnee, LM.lAnkle] as const;
+const ROW_R = [LM.rShoulder, LM.rWrist, LM.rHip, LM.rKnee, LM.rAnkle] as const;
+
 const rows: Detector = {
-  label: 'wrist height vs hip / torso (higher hand)',
+  label: 'wrist height vs hip / torso (hinged, higher hand)',
   unit: '',
   signal: (f) =>
-    combine(sides(f, REACH_L, REACH_R, ([shoulder, wrist, hip]) => (hip.y - wrist.y) / Math.max(dist(shoulder, hip), 1e-6)), 'max'),
+    combine(
+      sides(f, ROW_L, ROW_R, ([shoulder, wrist, hip, knee, ankle]) =>
+        torsoHeight(shoulder, hip, knee, ankle) < 1.0 ? (hip.y - wrist.y) / Math.max(dist(shoulder, hip), 1e-6) : NaN,
+      ),
+      'max',
+    ),
   lo: -0.45,
   hi: -0.12,
   countOn: 'hi',

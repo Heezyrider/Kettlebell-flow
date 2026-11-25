@@ -63,6 +63,20 @@ describe('RepCounter', () => {
     expect(run({ ...base, alpha: 0.3 }, [170, 170, 60, 170, 170, 170])).toBe(0);
   });
 
+  it('requires the signal to dwell in a zone before accepting it', () => {
+    const cfg = { ...base, minRepMs: 0, dwellMs: 150 };
+    // 100 ms dips to the bottom are too short; 300 ms ones count.
+    expect(run(cfg, [170, 170, 170, 80, 170, 170, 80, 170, 170])).toBe(0);
+    expect(run(cfg, [170, 170, 170, 80, 80, 80, 170, 170, 170])).toBe(1);
+  });
+
+  it('waits for the starting position to be held', () => {
+    const cfg = { ...base, minRepMs: 0, settleMs: 400 };
+    // Passing through the bottom on the way into position must not arm the counter.
+    expect(run(cfg, [80, 80, 170, 170, 170, 170, 170, 170])).toBe(0);
+    expect(run(cfg, [80, 80, 80, 80, 80, 80, 170, 170])).toBe(1);
+  });
+
   it('applies live threshold changes', () => {
     const c = new RepCounter({ ...base });
     c.update(170, 0);
