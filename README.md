@@ -33,7 +33,7 @@ To test on a phone before deploying you need HTTPS; the simplest route is to dep
 
 ## Deploying to GitHub Pages
 
-The workflow in `.github/workflows/deploy.yml` builds and deploys on every push to `main` (and can be run by hand from the Actions tab). One-time setup:
+The workflow in `.github/workflows/deploy.yml` builds and deploys on every push to `main` or to the initial `claude/kettlebell-flow-pwa-dntwwe` branch (and can be run by hand from the Actions tab). One-time setup:
 
 1. On GitHub open the repository → **Settings → Pages**.
 2. Under **Build and deployment → Source** choose **GitHub Actions**.
