@@ -48,3 +48,13 @@ describe('goblet squats', () => {
   });
   it('counts on standing back up', () => expect(reps('squats', [stand, ...cycle(deep, stand, 5)])).toBe(5));
 });
+
+describe('bicep curls', () => {
+  const down: Pose = { lShoulder: [0.5, 0.3], lElbow: [0.5, 0.45], lWrist: [0.5, 0.6] };
+  const up: Pose = { lShoulder: [0.5, 0.3], lElbow: [0.5, 0.45], lWrist: [0.52, 0.32] };
+  it('counts at the top of the curl', () => expect(reps('curls', [down, ...cycle(up, down, 5)])).toBe(5));
+  it('follows the working arm when the other one hangs still', () => {
+    const idle: Pose = { rShoulder: [0.4, 0.3], rElbow: [0.4, 0.45], rWrist: [0.4, 0.6] };
+    expect(reps('curls', [{ ...down, ...idle }, ...cycle({ ...up, ...idle }, { ...down, ...idle }, 3)])).toBe(3);
+  });
+});

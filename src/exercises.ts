@@ -175,6 +175,19 @@ const squats: Detector = {
   range: [-0.2, 1.3],
 };
 
+/** Bicep curls: elbow angle of the more bent arm. ~165° hanging, ~40° at the top. */
+const curls: Detector = {
+  label: 'elbow angle',
+  unit: '°',
+  signal: (f) => combine(sides(f, ARM_L, ARM_R, ([s, e, w]) => angle(s, e, w)), 'min'),
+  lo: 70,
+  hi: 140,
+  countOn: 'lo',
+  minRepMs: 700,
+  step: 5,
+  range: [20, 180],
+};
+
 /* ---------- catalogue ---------- */
 
 const SIDE = 'Side-on to the camera works best.';
@@ -185,7 +198,7 @@ export const EXERCISES: ExerciseDef[] = [
   { id: 'cleans', name: 'Cleans', defaultReps: 5, confidence: 'none', hint: FRONT },
   { id: 'swings', name: 'Swings', defaultReps: 5, confidence: 'none', hint: SIDE },
   { id: 'squats', name: 'Goblet squats', defaultReps: 5, confidence: 'high', hint: FRONT, detector: squats },
-  { id: 'curls', name: 'Bicep curls', defaultReps: 5, confidence: 'none', hint: FRONT },
+  { id: 'curls', name: 'Bicep curls', defaultReps: 5, confidence: 'high', hint: FRONT, detector: curls },
   { id: 'triceps', name: 'Tricep extensions', defaultReps: 5, confidence: 'none', hint: SIDE },
   {
     id: 'pullovers',
