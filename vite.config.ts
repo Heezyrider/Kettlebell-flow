@@ -5,5 +5,7 @@ import { defineConfig } from 'vite';
 // name in BASE_PATH; locally we serve from "/".
 export default defineConfig({
   base: process.env.BASE_PATH ?? '/',
+  // Shown on the setup screen so you can tell which deploy the phone is running.
+  define: { __BUILD__: JSON.stringify(`${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC`) },
   build: { target: 'es2020' },
 });

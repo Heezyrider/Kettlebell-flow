@@ -179,6 +179,8 @@ function renderSetup(): void {
         '📱 Prop the phone 2–3 m away, about hip height, so your whole body — head to feet — is in the picture. Turn the volume up.',
       ),
 
+      h('p', { class: 'muted small' }, `Build ${__BUILD__}`),
+
       h(
         'div',
         { class: 'start-wrap' },

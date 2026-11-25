@@ -39,6 +39,8 @@ export class PoseEngine {
   fps = 0;
   /** Skeleton colour; the workout sets it from the tracking state of the current exercise. */
   skeletonColor = '#9aa4b2';
+  /** The skeleton is drawn green until this time (performance.now()): the "rep counted" flash. */
+  flashUntil = 0;
   delegate: 'GPU' | 'CPU' | null = null;
 
   constructor(
@@ -155,7 +157,9 @@ export class PoseEngine {
     const unit = Math.max(w, hgt) / 100;
     ctx.lineCap = 'round';
     ctx.lineWidth = unit * 0.9;
-    ctx.strokeStyle = this.skeletonColor;
+    const flash = performance.now() < this.flashUntil;
+    ctx.lineWidth = unit * (flash ? 1.5 : 0.9);
+    ctx.strokeStyle = flash ? '#35e0a1' : this.skeletonColor;
     ctx.beginPath();
     for (const [a, b] of BONES) {
       if (!seen(a) || !seen(b)) continue;
@@ -163,7 +167,7 @@ export class PoseEngine {
       ctx.lineTo(lm[b].x * w, lm[b].y * hgt);
     }
     ctx.stroke();
-    ctx.fillStyle = '#f2f4f7';
+    ctx.fillStyle = flash ? '#35e0a1' : this.skeletonColor;
     for (const i of JOINTS) {
       if (!seen(i)) continue;
       ctx.beginPath();

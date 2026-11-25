@@ -55,7 +55,7 @@ The Vite base path is set automatically: the workflow passes `BASE_PATH=/<repo n
 
 Most exercises also have a **posture gate**: the signal only exists while the body is in the position the exercise is done in (plank for push-ups, chest up for squats, standing for curls, hinged for rows, elbows overhead for tricep extensions, hands together for swings). Outside it the frame is ignored, so walking into frame or picking up the bell is not counted.
 
-The skeleton colour and the status tag tell you which state you are in: **green / "counting"** – the signal is live; **amber / "get into position"** – you are visible but outside the posture gate; **red / "not tracking"** – required joints are hidden or out of frame. Green means the exercise is being measured, not that every rep will be right – that still depends on the thresholds.
+The skeleton colour and the status tag tell you which state you are in: **white / "in position"** – the signal is live and being measured; **amber / "get into position"** – you are visible but outside the posture gate; **red / "not tracking"** – required joints are hidden or out of frame. The skeleton flashes **green** only when a rep is counted. The setup screen shows the build time, so you can check the phone is running the latest deploy.
 
 The exercises live in `src/exercises.ts`:
 

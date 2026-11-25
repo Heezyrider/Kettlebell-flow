@@ -19,8 +19,12 @@ type Phase = 'loading' | 'intro' | 'active' | 'transition' | 'roundDone' | 'rest
 /** Body must be missing this long mid-set before the warning appears. */
 const WARN_AFTER_MS = 1200;
 
-/** Skeleton colours: green only while the exercise's signal is actually being counted. */
-const SKELETON = { ok: '#35e0a1', hold: '#ffb020', lost: '#ff5d5d' };
+/**
+ * Skeleton colours. White = in position and being measured, amber = not in
+ * position, red = joints missing. Green is reserved for the flash on a
+ * counted rep, so it never suggests more certainty than there is.
+ */
+const SKELETON = { ok: '#f2f4f7', hold: '#ffb020', lost: '#ff5d5d' };
 
 export class Workout {
   private seq: Sequence;
@@ -372,7 +376,7 @@ export class Workout {
     this.engine.skeletonColor = SKELETON[state];
     if (state === this.track) return;
     this.track = state;
-    this.modeTag.textContent = state === 'ok' ? '📷 counting' : state === 'hold' ? '📷 get into position' : '📷 not tracking';
+    this.modeTag.textContent = state === 'ok' ? '📷 in position' : state === 'hold' ? '📷 get into position' : '📷 not tracking';
     this.modeTag.className = `mode-tag ${state}`;
   }
 
@@ -381,6 +385,7 @@ export class Workout {
     if (this.phase !== 'active' || this.paused) return;
     this.reps++;
     this.totalReps++;
+    this.engine.flashUntil = performance.now() + 350;
     this.repsEl.textContent = String(this.reps);
     this.repsEl.classList.remove('pulse');
     void this.repsEl.offsetWidth; // restart the CSS animation
