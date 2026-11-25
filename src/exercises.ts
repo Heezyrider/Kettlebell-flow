@@ -282,6 +282,31 @@ const pullovers: Detector = {
   range: [-0.6, 1.6],
 };
 
+/**
+ * Halos: sideways position of the hands relative to the nose, in shoulder
+ * widths, while the hands are above shoulder height. Each circle carries the
+ * bell from one side of the head to the other. With alternating directions
+ * (the usual way) every side-to-side pass is one halo, so the counter credits
+ * each zone change. Circling the same way every time counts double.
+ */
+const halos: Detector = {
+  label: 'hands left/right of nose / shoulder width',
+  unit: '',
+  signal: (f) => {
+    const p = pts(f, [LM.nose, LM.lShoulder, LM.rShoulder, LM.lWrist, LM.rWrist]);
+    if (!p) return null;
+    const [nose, ls, rs, lw, rw] = p;
+    if ((lw.y + rw.y) / 2 > (ls.y + rs.y) / 2) return NaN;
+    return ((lw.x + rw.x) / 2 - nose.x) / Math.max(dist(ls, rs), 1e-6);
+  },
+  lo: -0.25,
+  hi: 0.25,
+  countOn: 'both',
+  minRepMs: 700,
+  step: 0.05,
+  range: [-1, 1],
+};
+
 /* ---------- catalogue ---------- */
 
 const SIDE = 'Side-on to the camera works best.';
@@ -302,7 +327,7 @@ export const EXERCISES: ExerciseDef[] = [
     hint: 'Lie side-on to the camera. Turn the phone to landscape so your whole body fits.',
     detector: pullovers,
   },
-  { id: 'halos', name: 'Alternating halos', defaultReps: 10, confidence: 'none', hint: FRONT },
+  { id: 'halos', name: 'Alternating halos', defaultReps: 10, confidence: 'low', hint: FRONT, detector: halos },
   {
     id: 'pushups',
     name: 'Push-ups',

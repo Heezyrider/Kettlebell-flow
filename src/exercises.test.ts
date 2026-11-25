@@ -112,3 +112,18 @@ describe('pullovers', () => {
     expect(reps('pullovers', [flip(overChest), ...cycle(flip(overhead), flip(overChest), 2)])).toBe(2);
   });
 });
+
+describe('alternating halos', () => {
+  const body: Pose = { nose: [0.5, 0.2], lShoulder: [0.58, 0.3], rShoulder: [0.42, 0.3] };
+  const right: Pose = { ...body, lWrist: [0.6, 0.15], rWrist: [0.56, 0.15] };
+  const left: Pose = { ...body, lWrist: [0.44, 0.15], rWrist: [0.4, 0.15] };
+  const lowered: Pose = { ...body, lWrist: [0.6, 0.5], rWrist: [0.56, 0.5] };
+  it('counts one halo per alternating circle', () => {
+    // clockwise (right, left), counter-clockwise (left, right), ...
+    expect(reps('halos', [right, left, left, right, right, left, left, right])).toBe(4);
+  });
+  it('ignores hands below shoulder height', () => {
+    expect(signal('halos', lowered)).toBeNaN();
+    expect(reps('halos', [right, lowered, right, lowered])).toBe(0);
+  });
+});
