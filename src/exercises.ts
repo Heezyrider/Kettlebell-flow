@@ -255,6 +255,33 @@ const rows: Detector = {
   range: [-1.2, 0.8],
 };
 
+/**
+ * Pullovers (lying down): how far the wrists are past the shoulders along the
+ * body axis (hip -> shoulder), in torso lengths. 0 with the arms straight up
+ * over the chest, about 1 with the bell behind the head. Measuring along the
+ * body axis makes it independent of how the phone is rotated.
+ */
+const pullovers: Detector = {
+  label: 'wrist past shoulder along body / torso',
+  unit: '',
+  signal: (f) =>
+    combine(
+      sides(f, REACH_L, REACH_R, ([shoulder, wrist, hip]) => {
+        const torso = Math.max(dist(shoulder, hip), 1e-6);
+        const ux = (shoulder.x - hip.x) / torso;
+        const uy = (shoulder.y - hip.y) / torso;
+        return ((wrist.x - shoulder.x) * ux + (wrist.y - shoulder.y) * uy) / torso;
+      }),
+      'mean',
+    ),
+  lo: 0.25,
+  hi: 0.7,
+  countOn: 'lo',
+  minRepMs: 900,
+  step: 0.05,
+  range: [-0.6, 1.6],
+};
+
 /* ---------- catalogue ---------- */
 
 const SIDE = 'Side-on to the camera works best.';
@@ -271,8 +298,9 @@ export const EXERCISES: ExerciseDef[] = [
     id: 'pullovers',
     name: 'Pullovers',
     defaultReps: 5,
-    confidence: 'none',
+    confidence: 'low',
     hint: 'Lie side-on to the camera. Turn the phone to landscape so your whole body fits.',
+    detector: pullovers,
   },
   { id: 'halos', name: 'Alternating halos', defaultReps: 10, confidence: 'none', hint: FRONT },
   {

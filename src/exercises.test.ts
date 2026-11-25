@@ -97,3 +97,18 @@ describe('rows', () => {
   });
   it('counts at the top of the pull', () => expect(reps('rows', [hang, ...cycle(pulled, hang, 5)])).toBe(5));
 });
+
+describe('pullovers', () => {
+  // Lying on the floor, head to the left of the frame.
+  const overChest: Pose = { rShoulder: [0.4, 0.8], rHip: [0.6, 0.8], rWrist: [0.4, 0.6] };
+  const overhead: Pose = { rShoulder: [0.4, 0.8], rHip: [0.6, 0.8], rWrist: [0.2, 0.78] };
+  it('measures reach along the body axis', () => {
+    expect(signal('pullovers', overChest)).toBeCloseTo(0, 1);
+    expect(signal('pullovers', overhead)).toBeCloseTo(1, 1);
+  });
+  it('counts when the bell returns over the chest', () => expect(reps('pullovers', [overChest, ...cycle(overhead, overChest, 5)])).toBe(5));
+  it('works with the head on the other side', () => {
+    const flip = (p: Pose): Pose => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, [1 - v![0], v![1]]])) as Pose;
+    expect(reps('pullovers', [flip(overChest), ...cycle(flip(overhead), flip(overChest), 2)])).toBe(2);
+  });
+});
