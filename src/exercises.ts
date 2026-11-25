@@ -205,6 +205,25 @@ const triceps: Detector = {
   range: [20, 180],
 };
 
+const REACH_L = [LM.lShoulder, LM.lWrist, LM.lHip] as const;
+const REACH_R = [LM.rShoulder, LM.rWrist, LM.rHip] as const;
+
+/** Wrist height relative to the shoulder, in torso lengths: 0 at shoulder level, about -1 at the hip. */
+const wristVsShoulder = ([shoulder, wrist, hip]: Pt[]): number => (shoulder.y - wrist.y) / Math.max(dist(shoulder, hip), 1e-6);
+
+/** Swings: wrist height relative to the shoulder. Below the hips at the bottom, near chest height at the top. */
+const swings: Detector = {
+  label: 'wrist height vs shoulder / torso',
+  unit: '',
+  signal: (f) => combine(sides(f, REACH_L, REACH_R, wristVsShoulder), 'mean'),
+  lo: -0.75,
+  hi: -0.25,
+  countOn: 'hi',
+  minRepMs: 700,
+  step: 0.05,
+  range: [-1.6, 0.6],
+};
+
 /* ---------- catalogue ---------- */
 
 const SIDE = 'Side-on to the camera works best.';
@@ -213,7 +232,7 @@ const FRONT = 'Face the camera, full body in frame.';
 export const EXERCISES: ExerciseDef[] = [
   { id: 'rows', name: 'Rows', defaultReps: 5, confidence: 'none', hint: SIDE },
   { id: 'cleans', name: 'Cleans', defaultReps: 5, confidence: 'none', hint: FRONT },
-  { id: 'swings', name: 'Swings', defaultReps: 5, confidence: 'none', hint: SIDE },
+  { id: 'swings', name: 'Swings', defaultReps: 5, confidence: 'high', hint: SIDE, detector: swings },
   { id: 'squats', name: 'Goblet squats', defaultReps: 5, confidence: 'high', hint: FRONT, detector: squats },
   { id: 'curls', name: 'Bicep curls', defaultReps: 5, confidence: 'high', hint: FRONT, detector: curls },
   { id: 'triceps', name: 'Tricep extensions', defaultReps: 5, confidence: 'medium', hint: SIDE, detector: triceps },

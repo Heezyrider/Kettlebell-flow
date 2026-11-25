@@ -69,3 +69,13 @@ describe('tricep extensions', () => {
     expect(reps('triceps', [locked, ...cycle(armsDown, locked, 3)])).toBe(0);
   });
 });
+
+describe('swings', () => {
+  const top: Pose = { lShoulder: [0.5, 0.3], lHip: [0.5, 0.55], lWrist: [0.7, 0.3] };
+  const bottom: Pose = { lShoulder: [0.6, 0.4], lHip: [0.45, 0.55], lWrist: [0.45, 0.65] };
+  it('measures wrist height in torso lengths', () => {
+    expect(signal('swings', top)).toBeCloseTo(0, 1);
+    expect(signal('swings', bottom)).toBeLessThan(-1);
+  });
+  it('counts at the top of the swing', () => expect(reps('swings', [bottom, ...cycle(top, bottom, 5)])).toBe(5));
+});
