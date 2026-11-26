@@ -18,7 +18,11 @@ A mobile-first web app (PWA) that guides you through a kettlebell circuit while 
 4. **Round complete** – *Rest* (countdown, then the next round starts by itself), *Start next round now* or *Finish*.
 5. Always on screen: **+1** (manual rep, also the space bar on a laptop), **Skip exercise**, **Pause / edit**. The pause screen holds the quick edits: reps of the current and the upcoming exercise, delay, rounds, debug mode.
 
-Exercises set to manual (✋) show a **Done** button instead of camera counting. Pullovers and halos default to manual because their camera counters are the least reliable; switch them to camera in the sequence editor if you want to try.
+Exercises set to manual (✋) show a **Done** button instead of camera counting. Pullovers default to manual because their camera counter is the least reliable; switch them to camera in the sequence editor if you want to try.
+
+On the setup screen, tap an exercise in the list to skip it for the workout (tap again to bring it back).
+
+**Halos** are counted when the bell has gone out to one side, behind your head, and reappears on the other side – in either direction. A tally under the counter shows how many started towards your left (L) and right (R); manual +1 taps are listed separately. For the next halo to register, bring the bell back in front of your face (centre) between circles.
 
 ## Development
 
@@ -69,9 +73,9 @@ The exercises live in `src/exercises.ts`:
 | Rows | wrist height vs hip ÷ torso, higher hand | −0.45 | −0.12 | hi (top of pull) | medium |
 | Cleans | wrist height vs shoulder ÷ torso, higher hand | −0.85 | −0.35 | hi (rack) | medium |
 | Pullovers | wrist reach past the shoulder along the body axis ÷ torso | 0.25 | 0.70 | lo (over chest) | low |
-| Alternating halos | hands left/right of the nose ÷ shoulder width, hands above shoulders | −0.25 | 0.25 | both (each pass) | low |
+| Halos | hands towards the left (+) / right (−) of the nose ÷ shoulder width, hands above shoulders | −0.25 | 0.25 | cross (bell reappears on the other side) | medium |
 
-`high` and `medium` exercises use the camera by default, `low` ones default to manual. You choose per exercise in the sequence editor.
+`high` and `medium` exercises use the camera by default, `low` ones default to manual. For halos, the centre is the inner half of the gap between `lo` and `hi`. You choose per exercise in the sequence editor.
 
 ## Tuning the thresholds on your phone
 

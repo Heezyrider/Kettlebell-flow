@@ -126,14 +126,30 @@ function renderSetup(): void {
           ),
         ),
         h(
-          'ol',
+          'div',
           { class: 'seq-preview' },
           seq.steps.map((s) => {
             const ex = getExercise(s.exercise);
-            return h('li', null, h('b', null, s.reps), ` ${ex.name} `, h('span', { class: 'muted' }, s.mode === 'camera' && ex.detector ? '📷' : '✋'));
+            const on = s.enabled !== false;
+            return h(
+              'button',
+              {
+                type: 'button',
+                class: `btn seq-item${on ? '' : ' off'}`,
+                'aria-pressed': String(on),
+                onclick: () => {
+                  s.enabled = !on;
+                  saveSequences(sequences);
+                  renderSetup();
+                },
+              },
+              h('span', { class: 'seq-check' }, on ? '✓' : ''),
+              h('span', { class: 'seq-name' }, h('b', null, s.reps), ` ${ex.name}`),
+              h('span', { class: 'muted' }, s.mode === 'camera' && ex.detector ? '📷' : '✋'),
+            );
           }),
         ),
-        h('p', { class: 'muted small' }, '📷 camera counts · ✋ tap to count'),
+        h('p', { class: 'muted small' }, 'Tap an exercise to skip it for this workout · 📷 camera counts · ✋ tap to count'),
       ),
 
       h(
@@ -189,7 +205,7 @@ function renderSetup(): void {
           {
             type: 'button',
             class: 'btn primary start',
-            disabled: seq.steps.length === 0,
+            disabled: !seq.steps.some((s) => s.enabled !== false),
             onclick: () => new Workout(root, seq, settings, renderSetup),
           },
           'Start workout',

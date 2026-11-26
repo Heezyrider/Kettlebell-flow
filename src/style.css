@@ -199,14 +199,44 @@ input[type='range'] {
   gap: 0.5rem;
 }
 .seq-preview {
-  margin: 0;
-  padding-left: 1.6rem;
-  columns: 2;
-  column-gap: 2rem;
-  line-height: 1.7;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
-.seq-preview b {
+.seq-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  text-align: left;
+  font-weight: 500;
+  padding: 0 0.8rem;
+  background: #0f1217;
+}
+.seq-check {
+  flex: none;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  border: 2px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 900;
+  display: grid;
+  place-items: center;
+}
+.seq-name {
+  flex: 1;
+}
+.seq-name b {
   color: var(--accent);
+}
+.seq-item.off .seq-check {
+  background: none;
+  border-color: var(--line);
+}
+.seq-item.off .seq-name {
+  color: var(--muted);
+  text-decoration: line-through;
 }
 .tip {
   margin: 0;
@@ -358,6 +388,19 @@ input[type='range'] {
   100% {
     transform: scale(1);
   }
+}
+
+.tally {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% + min(17vh, 20vw));
+  text-align: center;
+  font-size: clamp(1.6rem, 7vmin, 3.2rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 0.2em #000, 0 0 0.1em #000;
+  pointer-events: none;
 }
 
 .mode-tag {
@@ -689,8 +732,12 @@ input[type='range'] {
   }
   .counter,
   .hud-top,
+  .tally,
   .warn {
     right: 132px;
+  }
+  .tally {
+    top: calc(50% + 21vh);
   }
   .mode-tag {
     bottom: 0.6rem;
