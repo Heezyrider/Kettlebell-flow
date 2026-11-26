@@ -149,17 +149,28 @@ describe('pullovers', () => {
   });
 });
 
-describe('alternating halos', () => {
+describe('halos', () => {
+  // Facing the camera: the person's left side is on the right of the image.
   const body: Pose = { nose: [0.5, 0.2], lShoulder: [0.58, 0.3], rShoulder: [0.42, 0.3] };
-  const right: Pose = { ...body, lWrist: [0.6, 0.15], rWrist: [0.56, 0.15] };
-  const left: Pose = { ...body, lWrist: [0.44, 0.15], rWrist: [0.4, 0.15] };
+  const front: Pose = { ...body, lWrist: [0.52, 0.15], rWrist: [0.48, 0.15] };
+  const toLeft: Pose = { ...body, lWrist: [0.6, 0.15], rWrist: [0.56, 0.15] };
+  const toRight: Pose = { ...body, lWrist: [0.44, 0.15], rWrist: [0.4, 0.15] };
   const lowered: Pose = { ...body, lWrist: [0.6, 0.5], rWrist: [0.56, 0.5] };
-  it('counts one halo per alternating circle', () => {
-    // clockwise (right, left), counter-clockwise (left, right), ...
-    expect(reps('halos', [right, left, left, right, right, left, left, right])).toBe(4);
+  const viaLeft = [front, toLeft, front, toRight, front]; // "front" in the middle = bell behind the head
+  const viaRight = [front, toRight, front, toLeft, front];
+  it('signs the signal by body side, also when facing away', () => {
+    expect(signal('halos', toLeft)).toBeGreaterThan(0.25);
+    const mirror = (p: Pose): Pose => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, [1 - v![0], v![1]]])) as Pose;
+    expect(signal('halos', mirror(toLeft))).toBeGreaterThan(0.25);
+  });
+  it('counts one rep per circle with alternating directions', () => {
+    expect(reps('halos', [...viaLeft, ...viaRight, ...viaLeft, ...viaRight])).toBe(4);
+  });
+  it('counts one rep per circle in the same direction', () => {
+    expect(reps('halos', [...viaLeft, ...viaLeft, ...viaLeft])).toBe(3);
   });
   it('ignores hands below shoulder height', () => {
     expect(signal('halos', lowered)).toBeNaN();
-    expect(reps('halos', [right, lowered, right, lowered])).toBe(0);
+    expect(reps('halos', [front, lowered, front, lowered])).toBe(0);
   });
 });

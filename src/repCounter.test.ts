@@ -58,6 +58,31 @@ describe('RepCounter', () => {
     expect(run({ ...base, lo: -0.25, hi: 0.25, countOn: 'both' }, [0.5, -0.5, 0.5, -0.5], 1000)).toBe(3);
   });
 
+  describe("countOn 'cross'", () => {
+    const cfg: CounterConfig = { lo: -0.25, hi: 0.25, countOn: 'cross', minRepMs: 0, alpha: 1 };
+    const sidesOf = (samples: number[]): string[] => {
+      const c = new RepCounter({ ...cfg });
+      const out: string[] = [];
+      samples.forEach((s, i) => {
+        if (c.update(s, i * 100)) out.push(c.lastStartSide as string);
+      });
+      return out;
+    };
+    it('counts a pass on arrival at the second side and reports where it started', () => {
+      expect(sidesOf([0, 0.5, 0, -0.5, 0])).toEqual(['hi']);
+      expect(sidesOf([0, -0.5, 0, 0.5, 0])).toEqual(['lo']);
+    });
+    it('handles alternating directions', () => {
+      expect(sidesOf([0, 0.5, 0, -0.5, 0, -0.5, 0, 0.5, 0, 0.5, 0, -0.5, 0])).toEqual(['hi', 'lo', 'hi']);
+    });
+    it('handles the same direction every time', () => {
+      expect(sidesOf([0, 0.5, 0, -0.5, 0, 0.5, 0, -0.5, 0, 0.5, 0, -0.5, 0])).toEqual(['hi', 'hi', 'hi']);
+    });
+    it('does not count going out and back on one side', () => {
+      expect(sidesOf([0, 0.5, 0, 0.5, 0, 0.5, 0])).toEqual([]);
+    });
+  });
+
   it('smooths spikes with the EMA', () => {
     // A single-frame glitch down to 60 must not register as the bottom of a rep.
     expect(run({ ...base, alpha: 0.3 }, [170, 170, 60, 170, 170, 170])).toBe(0);

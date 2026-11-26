@@ -61,6 +61,9 @@ export class Workout {
   private repsEl = h('span', { class: 'reps-now' }, '0');
   private targetEl = h('span', { class: 'reps-target' });
   private modeTag = h('div', { class: 'mode-tag' });
+  /** Per-direction tally for exercises that have one (halos). */
+  private tallyEl = h('div', { class: 'tally', hidden: true });
+  private tally: Record<string, number> = {};
   private warn = h('div', { class: 'warn', hidden: true, role: 'alert' });
   private debugEl = h('div', { class: 'debug', hidden: true });
   private debugUpdate: ((raw: number | null) => void) | null = null;
@@ -77,6 +80,8 @@ export class Workout {
     private onExit: () => void,
   ) {
     this.seq = JSON.parse(JSON.stringify(sequence)) as Sequence;
+    // Exercises switched off on the setup screen are left out of this workout.
+    this.seq.steps = this.seq.steps.filter((s) => s.enabled !== false);
 
     const video = h('video', { class: 'cam', playsInline: true, muted: true, autoplay: true });
     video.setAttribute('playsinline', '');
@@ -96,6 +101,7 @@ export class Workout {
       this.stage,
       h('div', { class: 'hud-top' }, this.hudRound, this.hudName),
       h('div', { class: 'counter' }, this.repsEl, this.targetEl),
+      this.tallyEl,
       this.modeTag,
       this.warn,
       this.debugEl,
@@ -256,6 +262,8 @@ export class Workout {
     this.reps = 0;
     this.counter = null;
     this.detector = null;
+    this.tally = {};
+    this.tallyEl.hidden = true;
     this.warn.hidden = true;
     this.debugEl.hidden = true;
     // No pose inference behind the overlay: saves battery and keeps the countdown smooth.
@@ -332,6 +340,10 @@ export class Workout {
       });
       this.track = null;
       this.engine.skeletonColor = SKELETON.hold;
+      if (det.directions) {
+        this.tally = { [det.directions.hi]: 0, [det.directions.lo]: 0 };
+        this.renderTally();
+      }
       // 0 = "never seen yet": warn on the first frame without a body.
       this.lostSince = 0;
       this.modeTag.textContent = '📷 looking for you…';
@@ -366,9 +378,24 @@ export class Workout {
       this.warn.hidden = true;
       // NaN = visible, but not in the posture this exercise is counted in.
       this.setTrack(Number.isNaN(raw) ? 'hold' : 'ok');
-      if (this.counter.update(raw, t)) this.addRep();
+      if (this.counter.update(raw, t)) {
+        const side = this.counter.lastStartSide;
+        if (this.detector.directions && side) {
+          this.tally[this.detector.directions[side]]++;
+          this.renderTally();
+        }
+        this.addRep();
+      }
     }
     this.debugUpdate?.(raw);
+  }
+
+  private renderTally(): void {
+    const manual = this.reps - Object.values(this.tally).reduce((a, b) => a + b, 0);
+    const parts = Object.entries(this.tally).map(([side, n]) => `${side} ${n}`);
+    if (manual > 0) parts.push(`+1 ${manual}`);
+    this.tallyEl.textContent = parts.join('  ·  ');
+    this.tallyEl.hidden = false;
   }
 
   /** Reflects the tracking state in the status tag and the skeleton colour. */
@@ -390,6 +417,7 @@ export class Workout {
     this.repsEl.classList.remove('pulse');
     void this.repsEl.offsetWidth; // restart the CSS animation
     this.repsEl.classList.add('pulse');
+    if (!this.tallyEl.hidden) this.renderTally();
     if (this.reps >= this.step.reps) this.completeStep();
     else repBeep();
   }

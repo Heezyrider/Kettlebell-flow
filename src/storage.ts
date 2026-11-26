@@ -7,6 +7,8 @@ export interface Step {
   exercise: string;
   reps: number;
   mode: Mode;
+  /** false = switched off on the setup screen and left out of the workout. */
+  enabled?: boolean;
 }
 
 export interface Sequence {
@@ -32,6 +34,7 @@ export interface Settings {
 
 const SEQ_KEY = 'kbflow.sequences.v1';
 const SET_KEY = 'kbflow.settings.v1';
+const HALO_KEY = 'kbflow.migrated.haloCamera';
 
 export const uid = (): string => Math.random().toString(36).slice(2, 10);
 
@@ -69,7 +72,16 @@ function write(key: string, value: unknown): void {
 
 export function loadSequences(): Sequence[] {
   const list = read<Sequence[]>(SEQ_KEY);
-  if (Array.isArray(list) && list.length) return list;
+  if (Array.isArray(list) && list.length) {
+    // One-off: halos gained a usable camera counter, so saved sequences switch to it.
+    if (!read<boolean>(HALO_KEY)) {
+      list.forEach((seq) => seq.steps.forEach((s) => s.exercise === 'halos' && (s.mode = 'camera')));
+      write(SEQ_KEY, list);
+      write(HALO_KEY, true);
+    }
+    return list;
+  }
+  write(HALO_KEY, true);
   const fresh = [defaultSequence()];
   write(SEQ_KEY, fresh);
   return fresh;

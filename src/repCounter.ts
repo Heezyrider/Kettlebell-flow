@@ -12,9 +12,11 @@
  *   'hi'   - when the signal comes back up into the hi zone (push-up lockout)
  *   'lo'   - when it comes back down into the lo zone (top of a curl)
  *   'both' - on every zone change (movements that alternate direction)
+ *   'cross' - when the signal has gone to one side and then arrives at the
+ *            other, whichever side it started on (see updateCross)
  */
 export type Zone = 'lo' | 'hi';
-export type CountOn = Zone | 'both';
+export type CountOn = Zone | 'both' | 'cross';
 
 export interface CounterConfig {
   lo: number;
@@ -39,6 +41,9 @@ export class RepCounter {
   zone: Zone | null = null;
   private lastRepAt = -Infinity;
   private lastSampleAt = -Infinity;
+  /** 'cross' mode: the side the current pass started on, and the start side of the last counted pass. */
+  private startSide: Zone | null = null;
+  lastStartSide: Zone | null = null;
   private pending: Zone | null = null;
   private pendingSince = 0;
 
@@ -64,6 +69,7 @@ export class RepCounter {
     this.lastSampleAt = t;
 
     const z: Zone | null = this.value <= this.cfg.lo ? 'lo' : this.value >= this.cfg.hi ? 'hi' : null;
+    if (this.cfg.countOn === 'cross') return this.updateCross(z, t);
     if (z === null || z === this.zone) {
       this.pending = null;
       return false;
@@ -85,6 +91,44 @@ export class RepCounter {
     if (this.cfg.countOn !== 'both' && this.cfg.countOn !== z) return false;
     if (t - this.lastRepAt < this.cfg.minRepMs) return false;
     this.lastRepAt = t;
+    return true;
+  }
+
+  /**
+   * Side-to-side passes, e.g. a halo seen from the front: the bell leaves the
+   * centre to one side, goes behind the head and reappears on the other side.
+   * That arrival on the second side is one rep, and the side it started on is
+   * the direction (lastStartSide). Coming back to the centre (the inner half
+   * of the gap between the thresholds) releases the zone, so the next pass may
+   * start on either side: same direction every time or alternating both work.
+   */
+  private updateCross(z: Zone | null, t: number): boolean {
+    const { lo, hi } = this.cfg;
+    if (z === null) {
+      this.pending = null;
+      if (Math.abs((this.value as number) - (lo + hi) / 2) <= (hi - lo) / 4) this.zone = null;
+      return false;
+    }
+    if (z === this.zone) {
+      this.pending = null;
+      return false;
+    }
+    if (this.pending !== z) {
+      this.pending = z;
+      this.pendingSince = t;
+    }
+    if (t - this.pendingSince < (this.cfg.dwellMs ?? 0)) return false;
+    this.pending = null;
+    this.zone = z;
+    if (this.startSide === null || this.startSide === z) {
+      this.startSide = z;
+      return false;
+    }
+    const started = this.startSide;
+    this.startSide = null;
+    if (t - this.lastRepAt < this.cfg.minRepMs) return false;
+    this.lastRepAt = t;
+    this.lastStartSide = started;
     return true;
   }
 }
