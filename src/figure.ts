@@ -53,10 +53,12 @@ const FIGURES: Record<string, Pose[]> = {
   ],
   curls: [
     { head: [60, 18], neck: [60, 30], hip: [60, 64], arms: [[[61, 48], [65, 66]]], legs: STAND_LEGS, kb: [66, 73] },
+    { head: [60, 18], neck: [60, 30], hip: [60, 64], arms: [[[61, 48], [79, 50]]], legs: STAND_LEGS, kb: [85, 52] },
     { head: [60, 18], neck: [60, 30], hip: [60, 64], arms: [[[61, 48], [73, 35]]], legs: STAND_LEGS, kb: [78, 31] },
   ],
   triceps: [
     { head: [60, 22], neck: [60, 34], hip: [60, 66], arms: [[[64, 17], [64, 1]]], legs: STAND_LEGS, kb: [64, -6] },
+    { head: [60, 22], neck: [60, 34], hip: [60, 66], arms: [[[64, 17], [52, 6]]], legs: STAND_LEGS, kb: [47, 2] },
     { head: [60, 22], neck: [60, 34], hip: [60, 66], arms: [[[64, 17], [49, 21]]], legs: STAND_LEGS, kb: [45, 27] },
   ],
   rows: [
@@ -65,14 +67,17 @@ const FIGURES: Record<string, Pose[]> = {
   ],
   swings: [
     { head: [82, 42], neck: [74, 50], hip: [48, 70], arms: [[[64, 64], [53, 78]]], legs: HINGE_LEGS, kb: [47, 83] },
+    { head: [71, 28], neck: [66, 38], hip: [53, 67], arms: [[[76, 49], [87, 60]]], legs: HINGE_LEGS, kb: [92, 65] },
     { head: [58, 19], neck: [58, 30], hip: [58, 64], arms: [[[73, 31], [89, 31]]], legs: HINGE_LEGS, kb: [96, 31] },
   ],
   cleans: [
     { head: [77, 35], neck: [70, 44], hip: [50, 70], arms: [[[71, 60], [70, 76]]], legs: HINGE_LEGS, kb: [70, 83] },
+    { head: [65, 24], neck: [62, 34], hip: [55, 66], arms: [[[72, 46], [68, 61]]], legs: HINGE_LEGS, kb: [68, 68] },
     { head: [58, 19], neck: [58, 30], hip: [58, 64], arms: [[[63, 47], [67, 33]]], legs: HINGE_LEGS, kb: [73, 37] },
   ],
   pullovers: [
     { head: [30, 97], neck: [41, 99], hip: [78, 100], arms: [[[42, 81], [43, 63]]], legs: [[[94, 80], [106, 104]]], kb: [43, 56] },
+    { head: [30, 97], neck: [41, 99], hip: [78, 100], arms: [[[31, 83], [20, 69]]], legs: [[[94, 80], [106, 104]]], kb: [16, 63] },
     { head: [30, 97], neck: [41, 99], hip: [78, 100], arms: [[[27, 86], [13, 90]]], legs: [[[94, 80], [106, 104]]], kb: [6, 91] },
   ],
   halos: [
@@ -130,22 +135,25 @@ export function createFigure(exerciseId: string): { el: SVGSVGElement; stop: () 
     bell.setAttribute('transform', `translate(${k[0].toFixed(1)} ${k[1].toFixed(1)})`);
   };
 
-  // Two keyframes play as a there-and-back rep; more keyframes play as a loop.
-  const loop = frames.length > 2;
-  const segMs = loop ? 650 : 900;
-  const segments = loop ? frames.length : 2;
+  // Halos circle round and round; everything else plays out and back like a rep.
+  // The animation shows how to do the movement, so it runs even when the
+  // system asks for reduced motion (just slower).
+  const loop = exerciseId === 'halos';
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const cycleMs = (loop ? 2600 : 2000) * (reduced ? 1.6 : 1);
+  const last = frames.length - 1;
   let raf = 0;
   const start = performance.now();
   const tick = (now: number): void => {
-    const pos = (Math.max(0, now - start) / segMs) % segments;
-    const i = Math.floor(pos);
-    const eased = (1 - Math.cos((pos - i) * Math.PI)) / 2;
-    draw(frames[i % frames.length], frames[(i + 1) % frames.length], eased);
+    const phase = (Math.max(0, now - start) % cycleMs) / cycleMs;
+    // Position along the keyframes: constant speed round a loop, eased out-and-back otherwise.
+    const pos = loop ? phase * frames.length : ((1 - Math.cos(phase * 2 * Math.PI)) / 2) * last;
+    const i = Math.min(Math.floor(pos), loop ? last : last - 1);
+    draw(frames[i], frames[(i + 1) % frames.length], pos - i);
     raf = requestAnimationFrame(tick);
   };
-  draw(frames[0], frames[1], reduced ? 0.5 : 0);
-  if (!reduced) raf = requestAnimationFrame(tick);
+  draw(frames[0], frames[1], 0);
+  raf = requestAnimationFrame(tick);
 
   return { el: root, stop: () => cancelAnimationFrame(raf) };
 }
