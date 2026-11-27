@@ -30,6 +30,8 @@ export interface Settings {
   debug: boolean;
   /** Per-exercise threshold overrides set in debug mode. */
   thresholds: Record<string, { lo: number; hi: number }>;
+  /** Id of the last log entry when "Not now" was tapped on the add-a-round suggestion. */
+  suggestionDismissedAt?: string;
 }
 
 const SEQ_KEY = 'kbflow.sequences.v1';

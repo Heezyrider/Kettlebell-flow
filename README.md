@@ -24,6 +24,14 @@ On the setup screen, tap an exercise in the list to skip it for the workout (tap
 
 **Halos** are counted when the bell has gone out to one side, behind your head, and reappears on the other side – in either direction. A tally under the counter shows how many started towards your left (L) and right (R); manual +1 taps are listed separately. For the next halo to register, bring the bell back in front of your face (centre) between circles.
 
+## Log, difficulty and progression
+
+Every finished workout is logged on the phone (rounds, reps, minutes) and you rate it from 1 (very easy) to 6 (max effort). Ending a workout early from the pause screen logs what you did. The setup screen shows your day streak, whether today is done, and recent workouts; "Show all" lets you delete entries.
+
+When the last three workouts of a sequence were all completed in full at the current number of rounds and all rated 1 or 2, the setup screen suggests adding a round. Accepting it restarts the count at the new level; "Not now" hides it until after your next workout. The rule lives in `shouldSuggestRound` in `src/history.ts` (`EASY_MAX`, `EASY_RUN`).
+
+The log is stored only in the browser's `localStorage`: clearing site data or uninstalling the app erases it.
+
 ## Development
 
 ```bash

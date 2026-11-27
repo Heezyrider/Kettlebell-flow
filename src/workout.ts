@@ -10,9 +10,10 @@ import { doneBeep, goBeep, repBeep, speak, stopSpeaking, tickBeep, unlockAudio }
 import { clear, h, stepper } from './dom';
 import { getExercise, type Detector, type ExerciseDef, type Landmark } from './exercises';
 import { createFigure } from './figure';
+import { DIFFICULTY_LABELS, addHistory } from './history';
 import { PoseEngine, WakeLock } from './pose';
 import { RepCounter } from './repCounter';
-import { clamp, formatTime, saveSettings, type Sequence, type Settings, type Step } from './storage';
+import { clamp, formatTime, saveSettings, uid, type Sequence, type Settings, type Step } from './storage';
 
 type Phase = 'loading' | 'intro' | 'active' | 'transition' | 'roundDone' | 'rest' | 'finished';
 
@@ -33,6 +34,8 @@ export class Workout {
   private stepIdx = 0;
   private reps = 0;
   private totalReps = 0;
+  private roundsDone = 0;
+  private recorded = false;
   private paused = false;
   private startedAt = performance.now();
 
@@ -445,6 +448,7 @@ export class Workout {
   /* ---------- between rounds ---------- */
 
   private roundDone(): void {
+    this.roundsDone = this.round;
     this.counter = null;
     this.engine.detecting = false;
     this.engine.clearCanvas();
@@ -519,24 +523,69 @@ export class Workout {
     this.engine.detecting = false;
     this.updateHud();
     const mins = Math.round((performance.now() - this.startedAt) / 60000);
-    speak('Workout complete');
+    const complete = this.roundsDone >= this.seq.rounds;
+    speak(complete ? 'Workout complete. How hard was it?' : 'Workout ended. How hard was it?');
     this.showOverlay(
-      h('div', { class: 'ov-title' }, 'Workout complete'),
-      h('p', { class: 'ov-sub' }, `${this.totalReps} reps · ${mins} min`),
-      h('button', { type: 'button', class: 'btn primary big', onclick: () => this.exit() }, 'Finish'),
+      h('div', { class: 'ov-title small' }, complete ? 'Workout complete' : 'Workout ended'),
+      h('p', { class: 'ov-sub' }, `${this.roundsDone}/${this.seq.rounds} rounds · ${this.totalReps} reps · ${mins} min`),
+      h('div', { class: 'ov-next' }, 'How hard was it?'),
       h(
-        'button',
-        {
-          type: 'button',
-          class: 'btn big',
-          onclick: () => {
-            this.seq.rounds = Math.max(this.seq.rounds, this.round + 1);
-            this.nextRound();
+        'div',
+        { class: 'rate-grid' },
+        DIFFICULTY_LABELS.map((label, i) =>
+          h('button', { type: 'button', class: 'btn rate', onclick: () => this.record(mins, i + 1) }, h('b', null, i + 1), h('small', null, label)),
+        ),
+      ),
+      h(
+        'div',
+        { class: 'ov-buttons' },
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn big',
+            onclick: () => {
+              this.seq.rounds = Math.max(this.seq.rounds, this.round + 1);
+              this.nextRound();
+            },
           },
-        },
-        'One more round',
+          'One more round',
+        ),
+        h('button', { type: 'button', class: 'btn big', onclick: () => this.record(mins) }, 'Skip rating'),
       ),
     );
+  }
+
+  /** Writes the workout to the log (once) and leaves. */
+  private record(minutes: number, difficulty?: number): void {
+    if (!this.recorded && this.totalReps > 0) {
+      this.recorded = true;
+      addHistory({
+        id: uid(),
+        at: Date.now(),
+        sequenceId: this.seq.id,
+        sequenceName: this.seq.name,
+        rounds: this.roundsDone,
+        plannedRounds: this.seq.rounds,
+        reps: this.totalReps,
+        minutes,
+        difficulty,
+      });
+    }
+    this.exit();
+  }
+
+  /** "End workout" on the pause screen: anything done so far is still logged and rated. */
+  private endEarly(): void {
+    if (this.totalReps === 0) {
+      this.exit();
+      return;
+    }
+    this.paused = false;
+    this.pauseLayer.hidden = true;
+    clear(this.pauseLayer);
+    clearTimeout(this.transitionTimeout);
+    this.finish();
   }
 
   /* ---------- pause + quick edits ---------- */
@@ -628,7 +677,7 @@ export class Workout {
         h('div', { class: 'ov-title' }, 'Paused'),
         h('div', { class: 'edit-list' }, ...rows),
         h('button', { type: 'button', class: 'btn primary big', onclick: () => this.setPaused(false) }, 'Resume'),
-        h('button', { type: 'button', class: 'btn big danger', onclick: () => this.exit() }, 'End workout'),
+        h('button', { type: 'button', class: 'btn big danger', onclick: () => this.endEarly() }, 'End workout'),
       ),
     );
   }

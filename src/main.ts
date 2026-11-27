@@ -3,6 +3,7 @@ import { audioPrefs } from './audio';
 import { clear, h, stepper } from './dom';
 import { renderEditor } from './editor';
 import { getExercise } from './exercises';
+import { DIFFICULTY_LABELS, EASY_RUN, dayStreak, doneToday, loadHistory, removeHistory, shouldSuggestRound, type HistoryEntry } from './history';
 import { formatTime, loadSequences, loadSettings, saveSequences, saveSettings, uid, type Sequence } from './storage';
 import { Workout } from './workout';
 
@@ -58,6 +59,109 @@ function slider(label: string, min: number, max: number, step: number, value: nu
   );
 }
 
+let showAllHistory = false;
+
+function historyRow(e: HistoryEntry): HTMLElement {
+  const date = new Date(e.at).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  return h(
+    'li',
+    { class: 'hist-row' },
+    h('span', { class: 'hist-date' }, date),
+    h('span', { class: 'hist-main' }, `${e.rounds}/${e.plannedRounds} rounds · ${e.reps} reps · ${e.minutes} min`),
+    h('span', { class: `hist-rate${e.difficulty ? ` d${e.difficulty}` : ''}` }, e.difficulty ? `${e.difficulty}/6 ${DIFFICULTY_LABELS[e.difficulty - 1]}` : 'not rated'),
+    showAllHistory &&
+      h(
+        'button',
+        {
+          type: 'button',
+          class: 'btn icon danger',
+          'aria-label': 'Delete entry',
+          onclick: () => {
+            if (!confirm('Delete this workout from the log?')) return;
+            removeHistory(e.id);
+            renderSetup();
+          },
+        },
+        '✕',
+      ),
+  );
+}
+
+/** Streak, recent workouts and the "add a round" suggestion. */
+function progressCard(seq: Sequence): HTMLElement {
+  const history = loadHistory();
+  const now = Date.now();
+  const streak = dayStreak(history, now);
+  const today = doneToday(history, now);
+  const last = history[history.length - 1];
+  const suggest = shouldSuggestRound(history, seq.id, seq.rounds) && settings.suggestionDismissedAt !== last?.id;
+  const shown = (showAllHistory ? history : history.slice(-5)).slice().reverse();
+
+  return h(
+    'section',
+    { class: 'card' },
+    h(
+      'div',
+      { class: 'field-row' },
+      h('span', { class: 'streak' }, h('b', null, streak), ' day streak'),
+      h('span', { class: `today${today ? ' done' : ''}` }, today ? '✓ Done today' : 'Not done today'),
+    ),
+    suggest &&
+      h(
+        'div',
+        { class: 'suggest' },
+        h('p', null, `Your last ${EASY_RUN} workouts felt easy. Go from ${seq.rounds} to ${seq.rounds + 1} rounds?`),
+        h(
+          'div',
+          { class: 'add-row' },
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn primary',
+              onclick: () => {
+                seq.rounds += 1;
+                saveSequences(sequences);
+                renderSetup();
+              },
+            },
+            'Add a round',
+          ),
+          h(
+            'button',
+            {
+              type: 'button',
+              class: 'btn',
+              onclick: () => {
+                settings.suggestionDismissedAt = last?.id;
+                saveSettings(settings);
+                renderSetup();
+              },
+            },
+            'Not now',
+          ),
+        ),
+      ),
+    history.length
+      ? h('ul', { class: 'hist-list' }, shown.map(historyRow))
+      : h('p', { class: 'muted small' }, 'No workouts logged yet. Finish one and rate it to start your log.'),
+    history.length > 5 || showAllHistory
+      ? h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn',
+            onclick: () => {
+              showAllHistory = !showAllHistory;
+              renderSetup();
+            },
+          },
+          showAllHistory ? 'Show recent only' : `Show all ${history.length} (and edit)`,
+        )
+      : null,
+  );
+}
+
 function renderSetup(): void {
   const seq = activeSequence();
   const edit = (id: string): void =>
@@ -88,6 +192,8 @@ function renderSetup(): void {
       'div',
       { class: 'screen' },
       h('header', { class: 'topbar' }, h('h1', null, 'Kettlebell Flow')),
+
+      progressCard(seq),
 
       h(
         'section',
