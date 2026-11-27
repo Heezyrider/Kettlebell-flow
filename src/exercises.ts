@@ -319,30 +319,30 @@ const rows: Detector = {
 };
 
 /**
- * Pullovers (lying down): how far the wrists are past the shoulders along the
- * body axis (hip -> shoulder), in torso lengths. 0 with the arms straight up
- * over the chest, about 1 with the bell behind the head. Measuring along the
- * body axis makes it independent of how the phone is rotated.
+ * Pullovers (standing): the bell starts behind the head, is pulled up and over
+ * and finishes at the chest, then goes back overhead. Signal: wrist height
+ * relative to the shoulder, in torso lengths: about +0.3 behind the head,
+ * higher on the way over, about -0.2 at the chest. Counted on arrival at the
+ * chest. Only while standing upright with the hands together.
  */
 const pullovers: Detector = {
-  label: 'wrist past shoulder along body / torso',
+  label: 'wrist height vs shoulder / torso (standing, hands together)',
   unit: '',
-  signal: (f) =>
-    combine(
-      sides(f, REACH_L, REACH_R, ([shoulder, wrist, hip]) => {
-        const torso = Math.max(dist(shoulder, hip), 1e-6);
-        const ux = (shoulder.x - hip.x) / torso;
-        const uy = (shoulder.y - hip.y) / torso;
-        return ((wrist.x - shoulder.x) * ux + (wrist.y - shoulder.y) * uy) / torso;
-      }),
+  signal: (f) => {
+    const left = pts(f, REACH_L);
+    const right = pts(f, REACH_R);
+    if (left && right && dist(left[1], right[1]) > 0.7 * dist(left[0], left[2])) return NaN;
+    return combine(
+      sides(f, REACH_L, REACH_R, (p) => (torsoUpright(p[0], p[2]) ? wristVsShoulder(p) : NaN)),
       'mean',
-    ),
-  lo: 0.25,
-  hi: 0.7,
+    );
+  },
+  lo: -0.08,
+  hi: 0.2,
   countOn: 'lo',
   minRepMs: 900,
   step: 0.05,
-  range: [-0.6, 1.6],
+  range: [-1, 1.2],
 };
 
 /**
@@ -390,8 +390,8 @@ export const EXERCISES: ExerciseDef[] = [
     id: 'pullovers',
     name: 'Pullovers',
     defaultReps: 5,
-    confidence: 'low',
-    hint: 'Lie side-on to the camera. Turn the phone to landscape so your whole body fits.',
+    confidence: 'medium',
+    hint: FRONT,
     detector: pullovers,
   },
   { id: 'halos', name: 'Alternating halos', defaultReps: 10, confidence: 'medium', hint: FRONT, detector: halos },

@@ -18,7 +18,9 @@ A mobile-first web app (PWA) that guides you through a kettlebell circuit while 
 4. **Round complete** – *Rest* (countdown, then the next round starts by itself), *Start next round now* or *Finish*.
 5. Always on screen: **+1** (manual rep, also the space bar on a laptop), **Skip exercise**, **Pause / edit**. The pause screen holds the quick edits: reps of the current and the upcoming exercise, delay, rounds, debug mode.
 
-Exercises set to manual (✋) show a **Done** button instead of camera counting. Pullovers default to manual because their camera counter is the least reliable; switch them to camera in the sequence editor if you want to try.
+Exercises set to manual (✋) show a **Done** button instead of camera counting; you choose camera or manual per exercise in the sequence editor.
+
+**Pullovers** are the standing version: the bell starts behind the head, comes up and over, finishes at the chest and goes back. A rep counts when the bell reaches the chest.
 
 On the setup screen, tap an exercise in the list to skip it for the workout (tap again to bring it back).
 
@@ -65,7 +67,7 @@ The Vite base path is set automatically: the workflow passes `BASE_PATH=/<repo n
 5. requires the signal to stay past a threshold for a short dwell time (150 ms by default) so single-frame glitches are ignored, and the start position to be held for 0.4 s before counting begins,
 6. skips frames where the needed landmarks are not visible (visibility < 0.6 or outside the frame).
 
-Most exercises also have a **posture gate**: the signal only exists while the body is in the position the exercise is done in (plank for push-ups, chest up for squats, standing for curls, hinged for rows, elbows overhead for tricep extensions, hands together for swings). Outside it the frame is ignored, so walking into frame or picking up the bell is not counted.
+Most exercises also have a **posture gate**: the signal only exists while the body is in the position the exercise is done in (plank for push-ups, chest up for squats, standing for curls and pullovers, hinged for rows, elbows overhead for tricep extensions, hands together for swings). Outside it the frame is ignored, so walking into frame or picking up the bell is not counted.
 
 The skeleton colour and the status tag tell you which state you are in: **white / "in position"** – the signal is live and being measured; **amber / "get into position"** – you are visible but outside the posture gate; **red / "not tracking"** – required joints are hidden or out of frame. The skeleton flashes **green** only when a rep is counted. The setup screen shows the build time, so you can check the phone is running the latest deploy.
 
@@ -80,10 +82,10 @@ The exercises live in `src/exercises.ts`:
 | Tricep extensions | elbow angle (°), only while the elbow is above the shoulder | 95 | 150 | hi (lockout) | medium |
 | Rows | wrist height vs hip ÷ torso, higher hand | −0.45 | −0.12 | hi (top of pull) | medium |
 | Cleans | wrist height vs shoulder ÷ torso, higher hand | −0.85 | −0.35 | hi (rack) | medium |
-| Pullovers | wrist reach past the shoulder along the body axis ÷ torso | 0.25 | 0.70 | lo (over chest) | low |
+| Pullovers (standing) | wrist height vs shoulder ÷ torso, hands together (≈ +0.3 behind the head, ≈ −0.2 at the chest) | −0.08 | 0.20 | lo (bell at the chest) | medium |
 | Halos | hands towards the left (+) / right (−) of the nose ÷ shoulder width, hands above shoulders | −0.25 | 0.25 | cross (bell reappears on the other side) | medium |
 
-`high` and `medium` exercises use the camera by default, `low` ones default to manual. For halos, the centre is the inner half of the gap between `lo` and `hi`. You choose per exercise in the sequence editor.
+`high` and `medium` exercises use the camera by default; a `low` one would default to manual. For halos, the centre is the inner half of the gap between `lo` and `hi`. You choose per exercise in the sequence editor.
 
 ## Tuning the thresholds on your phone
 

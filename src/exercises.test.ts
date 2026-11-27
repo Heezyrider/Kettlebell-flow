@@ -135,17 +135,23 @@ describe('rows', () => {
 });
 
 describe('pullovers', () => {
-  // Lying on the floor, head to the left of the frame.
-  const overChest: Pose = { rShoulder: [0.4, 0.8], rHip: [0.6, 0.8], rWrist: [0.4, 0.6] };
-  const overhead: Pose = { rShoulder: [0.4, 0.8], rHip: [0.6, 0.8], rWrist: [0.2, 0.78] };
-  it('measures reach along the body axis', () => {
-    expect(signal('pullovers', overChest)).toBeCloseTo(0, 1);
-    expect(signal('pullovers', overhead)).toBeCloseTo(1, 1);
+  const torso: Pose = { rShoulder: [0.5, 0.3], rHip: [0.5, 0.55] };
+  const behindHead: Pose = { ...torso, rWrist: [0.48, 0.22] };
+  const overhead: Pose = { ...torso, rWrist: [0.5, 0.08] };
+  const chest: Pose = { ...torso, rWrist: [0.5, 0.36] };
+  it('measures wrist height against the shoulder', () => {
+    expect(signal('pullovers', behindHead)).toBeGreaterThan(0.2);
+    expect(signal('pullovers', chest)).toBeLessThan(-0.08);
   });
-  it('counts when the bell returns over the chest', () => expect(reps('pullovers', [overChest, ...cycle(overhead, overChest, 5)])).toBe(5));
-  it('works with the head on the other side', () => {
-    const flip = (p: Pose): Pose => Object.fromEntries(Object.entries(p).map(([k, v]) => [k, [1 - v![0], v![1]]])) as Pose;
-    expect(reps('pullovers', [flip(overChest), ...cycle(flip(overhead), flip(overChest), 2)])).toBe(2);
+  it('counts when the bell arrives at the chest', () => {
+    expect(reps('pullovers', [behindHead, ...cycle(overhead, chest, 1), ...cycle(overhead, behindHead, 1), overhead, chest])).toBe(2);
+    expect(reps('pullovers', [behindHead, ...cycle(chest, behindHead, 5)])).toBe(5);
+  });
+  it('does not count a pull that stops overhead', () => {
+    expect(reps('pullovers', [behindHead, ...cycle(overhead, behindHead, 3)])).toBe(0);
+  });
+  it('is not in position unless standing upright', () => {
+    expect(signal('pullovers', { rShoulder: [0.4, 0.8], rHip: [0.6, 0.8], rWrist: [0.4, 0.6] })).toBeNaN();
   });
 });
 
